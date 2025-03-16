@@ -1,36 +1,35 @@
 
 import '../styles/globals.css'
 import type { AppProps } from 'next/app'
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 
 function MyApp({ Component, pageProps }: AppProps) {
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
-    // Check for dark mode preference
-    if (typeof window !== 'undefined') {
-      const isDark = localStorage.getItem('darkMode') === 'true' || 
-                    window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setDarkMode(isDark);
+    // Check user preference from localStorage or system preference
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+      setDarkMode(true);
     }
   }, []);
 
   useEffect(() => {
-    // Apply dark mode class to html element
+    // Update body class and localStorage when theme changes
     if (darkMode) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('darkMode', 'true');
+      localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('darkMode', 'false');
+      localStorage.setItem('theme', 'light');
     }
   }, [darkMode]);
 
   return (
-    <div className="dark:bg-gray-900 dark:text-white min-h-screen transition-colors duration-300">
-      <Component {...pageProps} darkMode={darkMode} setDarkMode={setDarkMode} />
-    </div>
-  )
+    <Component {...pageProps} darkMode={darkMode} setDarkMode={setDarkMode} />
+  );
 }
 
 export default MyApp

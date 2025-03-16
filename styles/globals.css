@@ -14,30 +14,85 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 4px;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: #4b5563;
+  @apply bg-gray-300 dark:bg-gray-700 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  @apply bg-gray-400 dark:bg-gray-600;
 }
 
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+/* Base styles */
+body {
+  @apply antialiased text-gray-900 dark:text-gray-100 transition-colors duration-300;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 
+    'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 
+    'Segoe UI Emoji', 'Segoe UI Symbol';
 }
 
-/* Code block styles */
-.prose pre {
-  position: relative;
-  overflow: auto;
+.dark {
+  color-scheme: dark;
+}
+
+/* Chat-specific styles */
+.chat-container {
+  @apply h-full flex flex-col overflow-hidden;
+}
+
+.message-area {
+  @apply flex-1 overflow-y-auto p-4 space-y-4;
+  background-image: radial-gradient(circle at center, rgba(107, 114, 128, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.dark .message-area {
+  background-image: radial-gradient(circle at center, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+/* Typography enhancements */
+.prose {
+  @apply max-w-none;
+}
+
+.prose p {
+  @apply my-2;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  @apply font-semibold text-gray-900 dark:text-white my-2;
+}
+
+.prose a {
+  @apply text-blue-600 dark:text-blue-400 no-underline hover:underline;
 }
 
 .prose code {
-  font-family: 'Fira Code', monospace, Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono';
+  @apply font-mono text-sm rounded;
+}
+
+.prose pre {
+  @apply m-0 p-0 overflow-x-auto;
+}
+
+.prose ul,
+.prose ol {
+  @apply my-2 pl-5;
+}
+
+.prose ul {
+  @apply list-disc;
+}
+
+.prose ol {
+  @apply list-decimal;
+}
+
+.prose blockquote {
+  @apply border-l-4 border-gray-200 dark:border-gray-700 pl-4 italic my-3;
 }
 
 /* Animation keyframes */
@@ -54,57 +109,26 @@
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-html,
-body {
-  padding: 0;
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
-    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+/* Glass effect for UI elements */
+.glass-effect {
+  @apply backdrop-blur-sm bg-white/90 dark:bg-gray-900/90;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
-.dark {
-  color-scheme: dark;
+/* Modern buttons */
+.btn {
+  @apply px-4 py-2 rounded-md font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
 }
 
-.prose pre {
-  margin: 0;
-  padding: 0;
-  white-space: pre-wrap;
-  overflow-x: auto;
+.btn-primary {
+  @apply bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500;
 }
 
-.prose code {
-  color: inherit;
-  font-size: 0.9em;
-  background-color: rgba(0, 0, 0, 0.1);
-  padding: 0.2em 0.4em;
-  border-radius: 3px;
+.btn-secondary {
+  @apply bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 focus:ring-gray-500;
 }
 
-.dark .prose code {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.prose p {
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
-}
-
-.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
-  margin-top: 1.5em;
-  margin-bottom: 0.5em;
-}
-
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background-color: rgba(155, 155, 155, 0.5);
-  border-radius: 20px;
-  border: transparent;
+/* Highlighted text */
+.highlight {
+  @apply bg-yellow-100 dark:bg-yellow-900 px-1 rounded;
 }
