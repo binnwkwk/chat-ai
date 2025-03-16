@@ -8,7 +8,6 @@ import ChatInput from "../components/ChatInput";
 import ChatHistory from "../components/ChatHistory";
 import { generateChatResponse, ConversationType, MessageType, MODELS, ModelType } from "../utils/groq-client";
 import { getConversations, saveConversation, generateId, getConversation } from "../utils/storage";
-import ModelSelector from "../components/ModelSelector";
 
 interface HomeProps {
   darkMode: boolean;
@@ -33,6 +32,7 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
     if (loadedConversations.length > 0) {
       setActiveConversation(loadedConversations[0].id);
       setMessages(loadedConversations[0].messages);
+      setSelectedModel(loadedConversations[0].model || "llama3-8b-8192");
     }
   }, []);
 
@@ -130,6 +130,14 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
     setSelectedModel(modelId);
   };
 
+  // Empty state suggestions
+  const suggestions = [
+    "Explain quantum computing in simple terms",
+    "Write a short story about a robot who discovers emotions",
+    "How do I improve my coding skills?",
+    "What are the best practices for web accessibility?"
+  ];
+
   return (
     <div className="flex flex-col h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
       <Head>
@@ -139,7 +147,12 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
       </Head>
 
       {/* Header */}
-      <header className="flex items-center justify-between p-4 border-b dark:border-gray-800">
+      <motion.header 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="flex items-center justify-between p-4 border-b dark:border-gray-800"
+      >
         <div className="flex items-center">
           <button
             onClick={() => setIsOpen(!isOpen)}
@@ -149,19 +162,19 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
             </svg>
           </button>
-          <h1 className="text-xl font-bold">AI Chat</h1>
+          <motion.h1 
+            className="text-xl font-bold"
+            whileHover={{ scale: 1.05 }}
+          >
+            AI Chat
+          </motion.h1>
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden md:block w-40">
-            <ModelSelector 
-              models={MODELS} 
-              selectedModel={selectedModel} 
-              onSelectModel={handleModelChange}
-            />
-          </div>
-          <button
+          <motion.button
             onClick={() => setDarkMode(!darkMode)}
             className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
           >
             {darkMode ? (
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -172,9 +185,9 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
               </svg>
             )}
-          </button>
+          </motion.button>
         </div>
-      </header>
+      </motion.header>
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
@@ -220,34 +233,65 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
                 <ChatMessage key={message.id} message={message} index={index} />
               ))
             ) : (
-              <div className="flex flex-col items-center justify-center h-full">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8 }}
+                className="flex flex-col items-center justify-center h-full"
+              >
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5 }}
-                  className="text-center"
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  className="text-center max-w-lg"
                 >
-                  <div className="text-6xl mb-4">💬</div>
-                  <h2 className="text-xl font-bold mb-2">Welcome to AI Chat</h2>
-                  <p className="text-gray-600 dark:text-gray-400 max-w-md">
-                    Start a conversation by typing a message below.
+                  <motion.div 
+                    className="text-6xl mb-6"
+                    animate={{ 
+                      scale: [1, 1.1, 1],
+                      rotate: [0, 5, 0, -5, 0]
+                    }}
+                    transition={{ 
+                      duration: 2, 
+                      repeat: Infinity,
+                      repeatDelay: 3
+                    }}
+                  >
+                    💬
+                  </motion.div>
+                  <h2 className="text-2xl font-bold mb-4">Welcome to AI Chat</h2>
+                  <p className="text-gray-600 dark:text-gray-400 mb-8">
+                    Powered by Groq and Llama models, this AI assistant can help answer questions, generate content, and more.
                   </p>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Try asking:</p>
+                    {suggestions.map((suggestion, index) => (
+                      <motion.button
+                        key={index}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleSendMessage(suggestion)}
+                        className="block w-full p-3 text-left rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        {suggestion}
+                      </motion.button>
+                    ))}
+                  </div>
                 </motion.div>
-              </div>
+              </motion.div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
           {/* Input Area */}
           <div className="p-4 border-t dark:border-gray-800">
-            <div className="md:hidden mb-3">
-              <ModelSelector 
-                models={MODELS} 
-                selectedModel={selectedModel} 
-                onSelectModel={handleModelChange}
-              />
-            </div>
-            <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
+            <ChatInput 
+              onSendMessage={handleSendMessage} 
+              isLoading={isLoading} 
+              models={MODELS}
+              selectedModel={selectedModel}
+              onSelectModel={handleModelChange}
+            />
           </div>
         </div>
       </div>

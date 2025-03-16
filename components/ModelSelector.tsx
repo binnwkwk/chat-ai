@@ -21,10 +21,13 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
       transition={{ duration: 0.3 }}
       className="relative"
     >
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        AI Model
+      </label>
       <select
         value={selectedModel}
         onChange={(e) => onSelectModel(e.target.value)}
-        className="block w-full py-2 px-3 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+        className="block w-full py-2 px-3 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition-colors duration-200"
       >
         {models.map((model) => (
           <option key={model.id} value={model.id}>
