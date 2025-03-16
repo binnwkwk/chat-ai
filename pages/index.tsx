@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ChatMessage from "../components/ChatMessage";
 import ChatInput from "../components/ChatInput";
 import ChatHistory from "../components/ChatHistory";
+import LoadingAnimation from "../components/LoadingAnimation";
 import { generateChatResponse, ConversationType, MessageType, MODELS, ModelType } from "../utils/groq-client";
 import { getConversations, saveConversation, generateId, getConversation, deleteConversation } from "../utils/storage";
 import ModelSelector from "../components/ModelSelector";
@@ -138,9 +139,6 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
       setMessages([]);
     }
   };
-
-
-  import LoadingAnimation from "../components/LoadingAnimation";
 
   return (
     <div className="flex flex-col h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
