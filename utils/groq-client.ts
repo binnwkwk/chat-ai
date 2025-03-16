@@ -1,11 +1,5 @@
 
-import { Groq } from "groq-sdk";
-
-const apiKey = "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";
-
-const groqClient = new Groq({
-  apiKey,
-});
+import axios from "axios";
 
 export type MessageType = {
   role: "user" | "assistant";
@@ -18,25 +12,29 @@ export type ConversationType = {
   title: string;
   messages: MessageType[];
   timestamp: number;
+  model?: string;
 };
 
-export const generateChatResponse = async (messages: MessageType[]) => {
-  if (!apiKey) {
-    throw new Error("GROQ API key is not configured");
-  }
+export type ModelType = {
+  id: string;
+  name: string;
+};
 
+export const MODELS: ModelType[] = [
+  { id: "llama3-8b-8192", name: "Llama 3 8B" },
+  { id: "llama3-70b-8192", name: "Llama 3 70B" },
+  { id: "mixtral-8x7b-32768", name: "Mixtral 8x7B" },
+  { id: "gemma-7b-it", name: "Gemma 7B" }
+];
+
+export const generateChatResponse = async (messages: MessageType[], model: string = "llama3-8b-8192") => {
   try {
-    const chatMessages = messages.map(({ role, content }) => ({
-      role,
-      content,
-    }));
-
-    const completion = await groqClient.chat.completions.create({
-      messages: chatMessages,
-      model: "llama3-8b-8192",
+    const response = await axios.post('/api/chat', {
+      messages,
+      model
     });
-
-    return completion.choices[0]?.message?.content || "Sorry, I couldn't generate a response.";
+    
+    return response.data.content;
   } catch (error) {
     console.error("Error generating chat response:", error);
     throw error;

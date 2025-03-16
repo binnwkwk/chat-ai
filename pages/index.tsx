@@ -6,8 +6,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import ChatMessage from "../components/ChatMessage";
 import ChatInput from "../components/ChatInput";
 import ChatHistory from "../components/ChatHistory";
-import { generateChatResponse, ConversationType, MessageType } from "../utils/groq-client";
+import { generateChatResponse, ConversationType, MessageType, MODELS, ModelType } from "../utils/groq-client";
 import { getConversations, saveConversation, generateId, getConversation } from "../utils/storage";
+import ModelSelector from "../components/ModelSelector";
 
 interface HomeProps {
   darkMode: boolean;
@@ -20,6 +21,7 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
   const [activeConversation, setActiveConversation] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>("llama3-8b-8192");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load conversations from localStorage
@@ -64,7 +66,7 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
 
     try {
       // Generate AI response
-      const aiResponse = await generateChatResponse(updatedMessages);
+      const aiResponse = await generateChatResponse(updatedMessages, selectedModel);
       
       // Add AI message
       const aiMessage: MessageType = {
@@ -86,6 +88,7 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
         title: conversationTitle,
         messages: finalMessages,
         timestamp: Date.now(),
+        model: selectedModel,
       };
       
       // Save to storage
@@ -118,8 +121,13 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
     if (conversation) {
       setActiveConversation(id);
       setMessages(conversation.messages);
+      setSelectedModel(conversation.model || "llama3-8b-8192");
       setIsOpen(false); // Close sidebar on mobile
     }
+  };
+  
+  const handleModelChange = (modelId: string) => {
+    setSelectedModel(modelId);
   };
 
   return (
@@ -143,7 +151,14 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
           </button>
           <h1 className="text-xl font-bold">AI Chat</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          <div className="hidden md:block w-40">
+            <ModelSelector 
+              models={MODELS} 
+              selectedModel={selectedModel} 
+              onSelectModel={handleModelChange}
+            />
+          </div>
           <button
             onClick={() => setDarkMode(!darkMode)}
             className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -225,6 +240,13 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
 
           {/* Input Area */}
           <div className="p-4 border-t dark:border-gray-800">
+            <div className="md:hidden mb-3">
+              <ModelSelector 
+                models={MODELS} 
+                selectedModel={selectedModel} 
+                onSelectModel={handleModelChange}
+              />
+            </div>
             <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
           </div>
         </div>
