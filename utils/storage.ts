@@ -1,5 +1,5 @@
 
-import { ConversationType, MessageType, UserSettings, DEFAULT_SETTINGS } from "./groq-client";
+import { ConversationType, MessageType } from "./groq-client";
 
 // Get conversations from localStorage
 export const getConversations = (): ConversationType[] => {
@@ -51,25 +51,4 @@ export const deleteConversation = (id: string): void => {
 // Generate a unique ID
 export const generateId = (): string => {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
-};
-
-// Get user settings from localStorage
-export const getUserSettings = (): UserSettings => {
-  if (typeof window === "undefined") return DEFAULT_SETTINGS;
-  
-  const storedSettings = localStorage.getItem("userSettings");
-  if (storedSettings) {
-    try {
-      return JSON.parse(storedSettings);
-    } catch (error) {
-      console.error("Error parsing user settings:", error);
-    }
-  }
-  return DEFAULT_SETTINGS;
-};
-
-// Save user settings to localStorage
-export const saveUserSettings = (settings: UserSettings): void => {
-  if (typeof window === "undefined") return;
-  localStorage.setItem("userSettings", JSON.stringify(settings));
 };

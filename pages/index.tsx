@@ -6,24 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import ChatMessage from "../components/ChatMessage";
 import ChatInput from "../components/ChatInput";
 import ChatHistory from "../components/ChatHistory";
-import Settings from "../components/Settings";
-import { 
-  generateChatResponse, 
-  ConversationType, 
-  MessageType, 
-  MODELS, 
-  DEFAULT_SETTINGS,
-  UserSettings
-} from "../utils/groq-client";
-import { 
-  getConversations, 
-  saveConversation, 
-  generateId, 
-  getConversation, 
-  deleteConversation as deleteConversationStorage,
-  getUserSettings,
-  saveUserSettings
-} from "../utils/storage";
+import { generateChatResponse, ConversationType, MessageType, MODELS, ModelType } from "../utils/groq-client";
+import { getConversations, saveConversation, generateId, getConversation } from "../utils/storage";
 import ModelSelector from "../components/ModelSelector";
 
 interface HomeProps {
@@ -38,11 +22,9 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
   const [messages, setMessages] = useState<MessageType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>("llama3-8b-8192");
-  const [showSettings, setShowSettings] = useState(false);
-  const [userSettings, setUserSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Load conversations and settings from localStorage
+  // Load conversations from localStorage
   useEffect(() => {
     const loadedConversations = getConversations();
     setConversations(loadedConversations);
@@ -51,12 +33,7 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
     if (loadedConversations.length > 0) {
       setActiveConversation(loadedConversations[0].id);
       setMessages(loadedConversations[0].messages);
-      setSelectedModel(loadedConversations[0].model || "llama3-8b-8192");
     }
-
-    // Load user settings
-    const settings = getUserSettings();
-    setUserSettings(settings);
   }, []);
 
   // Scroll to bottom of messages
@@ -83,85 +60,52 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
       id: generateId(),
     };
 
-    // Update state with new message
     const updatedMessages = [...currentMessages, userMessage];
     setMessages(updatedMessages);
-
-    // Save conversation
-    const conversation: ConversationType = {
-      id: currentConvId,
-      title: updatedMessages[0]?.content.slice(0, 30) || "New conversation",
-      messages: updatedMessages,
-      timestamp: Date.now(),
-      model: selectedModel,
-    };
-    saveConversation(conversation);
-
-    // Update conversations list
-    const updatedConversations = [
-      conversation,
-      ...conversations.filter((conv) => conv.id !== currentConvId),
-    ];
-    setConversations(updatedConversations);
-
-    // Generate AI response
     setIsLoading(true);
-    try {
-      const aiResponse = await generateChatResponse(
-        updatedMessages, 
-        selectedModel,
-        userSettings.systemPrompt
-      );
 
+    try {
+      // Generate AI response
+      const aiResponse = await generateChatResponse(updatedMessages, selectedModel);
+      
+      // Add AI message
       const aiMessage: MessageType = {
         role: "assistant",
         content: aiResponse,
         id: generateId(),
       };
-
-      // Update messages with AI response
-      const messagesWithAiResponse = [...updatedMessages, aiMessage];
-      setMessages(messagesWithAiResponse);
-
-      // Save updated conversation
-      const updatedConversation: ConversationType = {
-        ...conversation,
-        messages: messagesWithAiResponse,
-      };
-      saveConversation(updatedConversation);
-
-      // Update conversations list
-      const newConversations = [
-        updatedConversation,
-        ...updatedConversations.filter((conv) => conv.id !== currentConvId),
-      ];
-      setConversations(newConversations);
-    } catch (error) {
-      console.error("Error getting AI response:", error);
       
+      // Update messages
+      const finalMessages = [...updatedMessages, aiMessage];
+      setMessages(finalMessages);
+      
+      // Create or update conversation
+      const existingConv = getConversation(currentConvId);
+      const conversationTitle = existingConv?.title || content.substring(0, 30);
+      
+      const updatedConversation: ConversationType = {
+        id: currentConvId,
+        title: conversationTitle,
+        messages: finalMessages,
+        timestamp: Date.now(),
+        model: selectedModel,
+      };
+      
+      // Save to storage
+      saveConversation(updatedConversation);
+      
+      // Update conversations list
+      const updatedConversations = getConversations();
+      setConversations(updatedConversations);
+    } catch (error) {
+      console.error("Error sending message:", error);
       // Add error message
       const errorMessage: MessageType = {
         role: "assistant",
-        content: "Sorry, I couldn't generate a response. Please try again.",
+        content: "Sorry, there was an error processing your request. Please try again.",
         id: generateId(),
       };
-      
-      const messagesWithError = [...updatedMessages, errorMessage];
-      setMessages(messagesWithError);
-      
-      // Save conversation with error
-      const conversationWithError: ConversationType = {
-        ...conversation,
-        messages: messagesWithError,
-      };
-      saveConversation(conversationWithError);
-      
-      // Update conversations list
-      const conversationsWithError = [
-        conversationWithError,
-        ...updatedConversations.filter((conv) => conv.id !== currentConvId),
-      ];
-      setConversations(conversationsWithError);
+      setMessages([...updatedMessages, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -170,7 +114,6 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
   const handleNewConversation = () => {
     setActiveConversation(null);
     setMessages([]);
-    setShowSettings(false);
   };
 
   const handleSelectConversation = (id: string) => {
@@ -180,81 +123,11 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
       setMessages(conversation.messages);
       setSelectedModel(conversation.model || "llama3-8b-8192");
       setIsOpen(false); // Close sidebar on mobile
-      setShowSettings(false);
-    }
-  };
-  
-  const handleDeleteConversation = (id: string) => {
-    deleteConversationStorage(id);
-    
-    // Update conversations state
-    const updatedConversations = conversations.filter(
-      (conv) => conv.id !== id
-    );
-    setConversations(updatedConversations);
-    
-    // If the active conversation was deleted, set active to the most recent one
-    if (activeConversation === id) {
-      if (updatedConversations.length > 0) {
-        setActiveConversation(updatedConversations[0].id);
-        setMessages(updatedConversations[0].messages);
-      } else {
-        setActiveConversation(null);
-        setMessages([]);
-      }
     }
   };
   
   const handleModelChange = (modelId: string) => {
     setSelectedModel(modelId);
-    
-    // Update current conversation if there is one
-    if (activeConversation) {
-      const conversation = getConversation(activeConversation);
-      if (conversation) {
-        const updatedConversation: ConversationType = {
-          ...conversation,
-          model: modelId,
-        };
-        saveConversation(updatedConversation);
-        
-        // Update conversations list
-        const updatedConversations = conversations.map((conv) =>
-          conv.id === activeConversation ? updatedConversation : conv
-        );
-        setConversations(updatedConversations);
-      }
-    }
-  };
-  
-  const handleSettingsUpdate = (settings: UserSettings) => {
-    setUserSettings(settings);
-    saveUserSettings(settings);
-  };
-
-  // Page animations
-  const sidebarVariants = {
-    hidden: { x: "-100%", opacity: 0 },
-    visible: { 
-      x: 0, 
-      opacity: 1,
-      transition: { 
-        type: "spring", 
-        stiffness: 260, 
-        damping: 20 
-      }
-    },
-  };
-  
-  const mainContentVariants = {
-    hidden: { opacity: 0, scale: 0.98 },
-    visible: { 
-      opacity: 1, 
-      scale: 1,
-      transition: { 
-        duration: 0.4 
-      }
-    },
   };
 
   return (
@@ -268,24 +141,15 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
       {/* Header */}
       <header className="flex items-center justify-between p-4 border-b dark:border-gray-800">
         <div className="flex items-center">
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+          <button
             onClick={() => setIsOpen(!isOpen)}
             className="mr-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 md:hidden"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
             </svg>
-          </motion.button>
-          <motion.h1 
-            className="text-xl font-bold"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            AI Chat
-          </motion.h1>
+          </button>
+          <h1 className="text-xl font-bold">AI Chat</h1>
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden md:block w-40">
@@ -295,9 +159,7 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
               onSelectModel={handleModelChange}
             />
           </div>
-          <motion.button
-            whileHover={{ scale: 1.1, rotate: 180 }}
-            transition={{ duration: 0.3 }}
+          <button
             onClick={() => setDarkMode(!darkMode)}
             className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
           >
@@ -310,159 +172,70 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
               </svg>
             )}
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setShowSettings(!showSettings)}
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-            </svg>
-          </motion.button>
+          </button>
         </div>
       </header>
 
-      {/* Main content */}
+      {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - Mobile version with overlay */}
+        {/* Mobile Sidebar */}
         <AnimatePresence>
           {isOpen && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black bg-opacity-50 z-10 md:hidden"
-              onClick={() => setIsOpen(false)}
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ duration: 0.3 }}
+              className="fixed inset-0 z-50 md:hidden"
             >
-              <motion.div
-                variants={sidebarVariants}
-                initial="hidden"
-                animate="visible"
-                exit="hidden"
-                className="absolute top-0 left-0 w-3/4 h-full bg-white dark:bg-gray-900 overflow-hidden"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="h-full overflow-y-auto p-4">
-                  {showSettings ? (
-                    <Settings
-                      settings={userSettings}
-                      updateSettings={handleSettingsUpdate}
-                      models={MODELS}
-                      selectedModel={selectedModel}
-                      onSelectModel={handleModelChange}
-                      darkMode={darkMode}
-                      setDarkMode={setDarkMode}
-                    />
-                  ) : (
-                    <ChatHistory
-                      conversations={conversations}
-                      activeConversation={activeConversation}
-                      onSelectConversation={handleSelectConversation}
-                      onDeleteConversation={handleDeleteConversation}
-                      onNewConversation={handleNewConversation}
-                      darkMode={darkMode}
-                      setDarkMode={setDarkMode}
-                      showSettings={showSettings}
-                      setShowSettings={setShowSettings}
-                    />
-                  )}
-                </div>
-              </motion.div>
+              <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setIsOpen(false)}></div>
+              <div className="absolute left-0 top-0 h-full w-4/5 max-w-xs bg-white dark:bg-gray-900 shadow-lg">
+                <ChatHistory
+                  conversations={conversations}
+                  activeConversation={activeConversation}
+                  onSelectConversation={handleSelectConversation}
+                  onNewConversation={handleNewConversation}
+                />
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Sidebar - Desktop version */}
-        <motion.div
-          initial={{ width: 0, opacity: 0 }}
-          animate={{ width: 300, opacity: 1 }}
-          className="hidden md:block w-72 border-r dark:border-gray-800 overflow-y-auto"
-        >
-          <div className="p-4 h-full">
-            {showSettings ? (
-              <Settings
-                settings={userSettings}
-                updateSettings={handleSettingsUpdate}
-                models={MODELS}
-                selectedModel={selectedModel}
-                onSelectModel={handleModelChange}
-                darkMode={darkMode}
-                setDarkMode={setDarkMode}
-              />
-            ) : (
-              <ChatHistory
-                conversations={conversations}
-                activeConversation={activeConversation}
-                onSelectConversation={handleSelectConversation}
-                onDeleteConversation={handleDeleteConversation}
-                onNewConversation={handleNewConversation}
-                darkMode={darkMode}
-                setDarkMode={setDarkMode}
-                showSettings={showSettings}
-                setShowSettings={setShowSettings}
-              />
-            )}
-          </div>
-        </motion.div>
+        {/* Desktop Sidebar */}
+        <div className="hidden md:block md:w-64 lg:w-80 border-r dark:border-gray-800">
+          <ChatHistory
+            conversations={conversations}
+            activeConversation={activeConversation}
+            onSelectConversation={handleSelectConversation}
+            onNewConversation={handleNewConversation}
+          />
+        </div>
 
-        {/* Main chat area */}
-        <motion.div
-          variants={mainContentVariants}
-          initial="hidden"
-          animate="visible"
-          className="flex-1 flex flex-col overflow-hidden"
-        >
+        {/* Chat Area */}
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4">
-            {messages.length === 0 ? (
-              <motion.div
-                className="h-full flex flex-col items-center justify-center text-center p-8"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                <div className="bg-primary bg-opacity-10 p-6 rounded-full mb-6">
-                  <svg
-                    className="w-12 h-12 text-primary mx-auto"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-                    ></path>
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-bold mb-2">Welcome to AI Chat!</h2>
-                <p className="text-gray-500 dark:text-gray-400 max-w-md">
-                  Start a conversation with our advanced AI. Ask questions, get creative
-                  responses, or just chat about anything you're curious about.
-                </p>
-              </motion.div>
+            {messages.length > 0 ? (
+              messages.map((message, index) => (
+                <ChatMessage key={message.id} message={message} index={index} />
+              ))
             ) : (
-              <div>
-                <AnimatePresence>
-                  {messages.map((message) => (
-                    <ChatMessage
-                      key={message.id}
-                      message={message}
-                      userName={userSettings.userName}
-                      userImage={userSettings.userImage}
-                      aiName={userSettings.aiName}
-                      aiImage={userSettings.aiImage}
-                    />
-                  ))}
-                </AnimatePresence>
-                <div ref={messagesEndRef} />
+              <div className="flex flex-col items-center justify-center h-full">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5 }}
+                  className="text-center"
+                >
+                  <div className="text-6xl mb-4">💬</div>
+                  <h2 className="text-xl font-bold mb-2">Welcome to AI Chat</h2>
+                  <p className="text-gray-600 dark:text-gray-400 max-w-md">
+                    Start a conversation by typing a message below.
+                  </p>
+                </motion.div>
               </div>
             )}
+            <div ref={messagesEndRef} />
           </div>
 
           {/* Input Area */}
@@ -476,7 +249,7 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
             </div>
             <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );
