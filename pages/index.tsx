@@ -1,4 +1,3 @@
-
 import type { NextPage } from "next";
 import Head from "next/head";
 import { useEffect, useRef, useState } from "react";
@@ -7,7 +6,7 @@ import ChatMessage from "../components/ChatMessage";
 import ChatInput from "../components/ChatInput";
 import ChatHistory from "../components/ChatHistory";
 import { generateChatResponse, ConversationType, MessageType, MODELS, ModelType } from "../utils/groq-client";
-import { getConversations, saveConversation, generateId, getConversation } from "../utils/storage";
+import { getConversations, saveConversation, generateId, getConversation, deleteConversation } from "../utils/storage";
 import ModelSelector from "../components/ModelSelector";
 
 interface HomeProps {
@@ -28,7 +27,7 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
   useEffect(() => {
     const loadedConversations = getConversations();
     setConversations(loadedConversations);
-    
+
     // Set active conversation to the most recent one if it exists
     if (loadedConversations.length > 0) {
       setActiveConversation(loadedConversations[0].id);
@@ -67,22 +66,22 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
     try {
       // Generate AI response
       const aiResponse = await generateChatResponse(updatedMessages, selectedModel);
-      
+
       // Add AI message
       const aiMessage: MessageType = {
         role: "assistant",
         content: aiResponse,
         id: generateId(),
       };
-      
+
       // Update messages
       const finalMessages = [...updatedMessages, aiMessage];
       setMessages(finalMessages);
-      
+
       // Create or update conversation
       const existingConv = getConversation(currentConvId);
       const conversationTitle = existingConv?.title || content.substring(0, 30);
-      
+
       const updatedConversation: ConversationType = {
         id: currentConvId,
         title: conversationTitle,
@@ -90,10 +89,10 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
         timestamp: Date.now(),
         model: selectedModel,
       };
-      
+
       // Save to storage
       saveConversation(updatedConversation);
-      
+
       // Update conversations list
       const updatedConversations = getConversations();
       setConversations(updatedConversations);
@@ -125,10 +124,27 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
       setIsOpen(false); // Close sidebar on mobile
     }
   };
-  
+
   const handleModelChange = (modelId: string) => {
     setSelectedModel(modelId);
   };
+
+  const handleDeleteConversation = (id: string) => {
+    deleteConversation(id);
+    const updatedConversations = getConversations();
+    setConversations(updatedConversations);
+    if (activeConversation === id) {
+      setActiveConversation(null);
+      setMessages([]);
+    }
+  };
+
+
+  const LoadingAnimation = () => (
+    <div className="flex items-center justify-center h-16">
+      <div className="w-8 h-8 border-4 border-gray-400 border-t-4 border-t-blue-500 rounded-full animate-spin"></div>
+    </div>
+  );
 
   return (
     <div className="flex flex-col h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
@@ -153,9 +169,9 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden md:block w-40">
-            <ModelSelector 
-              models={MODELS} 
-              selectedModel={selectedModel} 
+            <ModelSelector
+              models={MODELS}
+              selectedModel={selectedModel}
               onSelectModel={handleModelChange}
             />
           </div>
@@ -195,6 +211,7 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
                   activeConversation={activeConversation}
                   onSelectConversation={handleSelectConversation}
                   onNewConversation={handleNewConversation}
+                  onDeleteConversation={handleDeleteConversation}
                 />
               </div>
             </motion.div>
@@ -208,6 +225,7 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
             activeConversation={activeConversation}
             onSelectConversation={handleSelectConversation}
             onNewConversation={handleNewConversation}
+            onDeleteConversation={handleDeleteConversation}
           />
         </div>
 
@@ -215,25 +233,36 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
         <div className="flex-1 flex flex-col h-full overflow-hidden">
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4">
-            {messages.length > 0 ? (
-              messages.map((message, index) => (
-                <ChatMessage key={message.id} message={message} index={index} />
-              ))
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full">
+            {messages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center p-4">
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5 }}
-                  className="text-center"
+                  className="max-w-md"
                 >
-                  <div className="text-6xl mb-4">💬</div>
-                  <h2 className="text-xl font-bold mb-2">Welcome to AI Chat</h2>
-                  <p className="text-gray-600 dark:text-gray-400 max-w-md">
-                    Start a conversation by typing a message below.
+                  <h2 className="text-2xl font-bold mb-2">Welcome to AI Chat</h2>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    This is a modern chat interface powered by large language models from Groq.
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-500">
+                    To get started, type a message below.
                   </p>
                 </motion.div>
               </div>
+            ) : (
+              <>
+                <AnimatePresence>
+                  {messages.map((message, index) => (
+                    <ChatMessage
+                      key={message.id}
+                      message={message}
+                      index={index}
+                    />
+                  ))}
+                </AnimatePresence>
+                {isLoading && <LoadingAnimation />}
+              </>
             )}
             <div ref={messagesEndRef} />
           </div>
@@ -241,9 +270,9 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
           {/* Input Area */}
           <div className="p-4 border-t dark:border-gray-800">
             <div className="md:hidden mb-3">
-              <ModelSelector 
-                models={MODELS} 
-                selectedModel={selectedModel} 
+              <ModelSelector
+                models={MODELS}
+                selectedModel={selectedModel}
                 onSelectModel={handleModelChange}
               />
             </div>

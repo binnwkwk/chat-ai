@@ -13,6 +13,7 @@ interface ChatHistoryProps {
   activeConversation: string | null;
   onSelectConversation: (id: string) => void;
   onNewConversation: () => void;
+  onDeleteConversation: (id: string) => void;
 }
 
 const ChatHistory: React.FC<ChatHistoryProps> = ({
@@ -20,6 +21,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   activeConversation,
   onSelectConversation,
   onNewConversation,
+  onDeleteConversation,
 }) => {
   return (
     <motion.div
@@ -47,6 +49,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                 key={conversation.id}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
+                className="relative"
               >
                 <button
                   onClick={() => onSelectConversation(conversation.id)}
@@ -65,6 +68,18 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                   <div className="text-xs text-gray-500 mt-1">
                     {new Date(conversation.timestamp).toLocaleDateString()}
                   </div>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteConversation(conversation.id);
+                  }}
+                  className="absolute right-2 top-2 p-1 rounded-full text-gray-500 hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900 transition-colors"
+                  aria-label="Delete conversation"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
                 </button>
               </motion.li>
             ))}
