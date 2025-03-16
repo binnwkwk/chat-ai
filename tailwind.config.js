@@ -9,15 +9,48 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: "#5C6AC4",
-        secondary: "#2D3748",
-        dark: "#1A202C",
-        light: "#F7FAFC",
+        primary: '#0097FB',
       },
-      animation: {
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-      }
+      typography: {
+        DEFAULT: {
+          css: {
+            maxWidth: '100%',
+            code: {
+              backgroundColor: '#f4f4f4',
+              padding: '0.1em 0.2em',
+              borderRadius: '0.2em',
+              fontWeight: '400',
+            },
+            'code::before': {
+              content: '""',
+            },
+            'code::after': {
+              content: '""',
+            },
+            pre: {
+              backgroundColor: '#2d3748',
+              color: '#e2e8f0',
+              fontSize: '0.875rem',
+              borderRadius: '0.375rem',
+              padding: '0.75rem 1rem',
+            },
+          },
+        },
+        dark: {
+          css: {
+            color: '#e2e8f0',
+            code: {
+              backgroundColor: '#374151',
+            },
+            pre: {
+              backgroundColor: '#1a202c',
+            },
+          },
+        },
+      },
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/typography'),
+  ],
 }

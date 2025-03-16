@@ -140,11 +140,7 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
   };
 
 
-  const LoadingAnimation = () => (
-    <div className="flex items-center justify-center h-16">
-      <div className="w-8 h-8 border-4 border-gray-400 border-t-4 border-t-blue-500 rounded-full animate-spin"></div>
-    </div>
-  );
+  import LoadingAnimation from "../components/LoadingAnimation";
 
   return (
     <div className="flex flex-col h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
