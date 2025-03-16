@@ -6,6 +6,7 @@ import ChatMessage from "../components/ChatMessage";
 import ChatInput from "../components/ChatInput";
 import ChatHistory from "../components/ChatHistory";
 import LoadingAnimation from "../components/LoadingAnimation";
+import Footer from "../components/Footer";
 import { generateChatResponse, ConversationType, MessageType, MODELS, ModelType } from "../utils/groq-client";
 import { getConversations, saveConversation, generateId, getConversation, deleteConversation } from "../utils/storage";
 import ModelSelector from "../components/ModelSelector";
@@ -272,6 +273,7 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
             </div>
             <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
           </div>
+          <Footer />
         </div>
       </div>
     </div>
