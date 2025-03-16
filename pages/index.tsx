@@ -3,7 +3,7 @@ import type { NextPage } from "next";
 import Head from "next/head";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import ChatMessage from "../components/ChatMessage";
+import ChatMessage, { ThinkingAnimation } from "../components/ChatMessage";
 import ChatInput from "../components/ChatInput";
 import ChatHistory from "../components/ChatHistory";
 import { generateChatResponse, ConversationType, MessageType, MODELS, ModelType } from "../utils/groq-client";
@@ -229,9 +229,22 @@ const Home: NextPage<HomeProps> = ({ darkMode, setDarkMode }) => {
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4">
             {messages.length > 0 ? (
-              messages.map((message, index) => (
-                <ChatMessage key={message.id} message={message} index={index} />
-              ))
+              <>
+                {messages.map((message, index) => (
+                  <ChatMessage key={message.id} message={message} index={index} />
+                ))}
+                {isLoading && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex justify-start mb-4"
+                  >
+                    <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-3">
+                      <ThinkingAnimation />
+                    </div>
+                  </motion.div>
+                )}
+              </>
             ) : (
               <motion.div 
                 initial={{ opacity: 0 }}
